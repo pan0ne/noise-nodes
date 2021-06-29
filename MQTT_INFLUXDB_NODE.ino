@@ -102,9 +102,9 @@ void setup() {
       Leq_samples = 0;
       
       // Serial output, customize (or remove) as needed
-      Serial.printf("Decible: %.1f\n", Leq_dB);
+      //Serial.printf("Decible: %.1f\n", Leq_dB);
       sendToInfluxDB(Leq_dB);
-      delay(1000);
+      //delay(1000);
 
       // Debug only
      // Serial.printf("%u processing ticks\n", q.proc_ticks);
@@ -114,18 +114,19 @@ void setup() {
 
 void sendToInfluxDB(float valueInDecibels)
 {
-  if (!client.connected()){
-    reconnect();
-  }
-  client.loop();
    // read temperature
   dtostrf(valueInDecibels, 3, 1, valTemperature);
   String payload;
   payload = "sensor2 db=";
   payload += valTemperature;
   // publish temperature
+  if (!client.connected()){
+    reconnect();
+  }
+  client.loop();
   client.publish("db", (char*) payload.c_str());
-  Serial.println("Send Data");
+  //Serial.println("Send Data");
+  //Serial.printf("Decible: %.1f\n", valueInDecibels);
   delay(1000);
 }
 
