@@ -1,8 +1,8 @@
-# noise-nodes
-Project to detect and visulize noisy spots (streets, parks)
+# noise-nodes project 
+detect and visulize noisy spots (streets, parks)
 
 ### Nodes = ESP32 and IMNS411 Mic Sensor -> send data to InfluxDB Server and visulized by Grafana incl. MAP Plugin
-Measurements in decibles (dB) are sent to influxdb over wifi. But the goal should be a LoRa mesh network.
+Measurements in decibles (dB) are sent to influxdb over wifi. Goal should be a LoRa mesh network.
 
 ### Server 
 Based on IOTStack Docker Script and contains Grafana, Telegraf, Mosquito and InfluxDB.
