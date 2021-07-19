@@ -1,11 +1,11 @@
-/*   Arduino Sketch to Program ESP32's to read i2c MEMS Sensor from
- *   its I2C Bus, send the data directly into InfluxDB
+/*   Sketch: ESP32's read i2c MEMS Sensor from
+ *   its I2C Bus, send the data over wifi directly into InfluxDB
  *   
  *   BOARD: DOIT ESP32 DEVKIT V1
  *   USED BOARD MANAGER URL: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
- *   ADD LIBRARYS: Unzip github repos to /Arduino/Libraries/ 
+ *   ADD LIBRARIES: Unzip github repos (see links below) to /Arduino/Libraries/ 
  *   ADD TABS: credentials.h and sos-iir-filter.h (Drag&Drop files from folder to Arduino IDE)
- *   CONFIG: change credentials.h with wifi, influxdb with node ares and names
+ *   CONFIG: change credentials.h with wifi, influxdb, node ares and names
  *   
  *   PIN CONNECTION ESP32 to INMP441 Mic Sensor
  *   3.3V - VDD
@@ -25,7 +25,7 @@
 #include "sos-iir-filter.h"           // https://github.com/ikostoski/esp32-i2s-slm
 #include <WiFi.h>                     // https://github.com/espressif/arduino-esp32
 #include <PubSubClient.h>             // https://github.com/knolleary/pubsubclient
-#include "credentials.h"              // Drag and drop credentials.h as new tab
+#include "credentials.h"              // drag and drop credentials.h as new tab
 #include <InfluxDbClient.h>
 
 WiFiClient espClient; 
