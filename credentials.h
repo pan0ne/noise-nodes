@@ -8,7 +8,7 @@
  *  E.g. http://192.168.1.48:8086 
 */
 
-#define INFLUXDB_URL "http://192.168.1.2:8086"
+#define INFLUXDB_URL "http://your-influxdb-server-address:8086"
 #define INFLUXDB_DB_NAME "your-influxdb-database"
 #define INFLUXDB_USER "your-influxdb-username"
 #define INFLUXDB_PASSWORD "your-influxdb-password"
@@ -26,10 +26,10 @@ String SENSOR_ID =        "NoiseNode";
 // #define NODE_ID           "Node03"
 
 /*
- * Get Geo Coordinates LAT/LANG from Google Maps and create GeoHash on http://geohash.co/ 
+ * Get geo location coordinates LAT/LANG from Google Maps and create GeoHash on http://geohash.co/ 
  * Geohash (Size 12): 
  * Node01: your geohash  (Coordinates eg. 52.42717185, 7.78053906 )
- * Node02: u1hud3crb9w (52.42696750, 7.78031141) for example)
+ * Node02: u1hud3crb9w (52.42696750, 7.78031141) for example
  * Node03: u1hud612yp8 (52.42717185, 7.78053906) 
 */
 
