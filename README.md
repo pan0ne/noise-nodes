@@ -13,7 +13,3 @@ Check: https://sensorsiot.github.io/IOTstack/
 
 ### Pin Diagramm
 ![Fritzing](https://github.com/pan0ne/noise-nodes/blob/main/fritzing.png)
-
-### Server 
-Based on IOTStack Docker Script and contains Grafana, Telegraf, Mosquito and InfluxDB.
-Check: https://sensorsiot.github.io/IOTstack/
