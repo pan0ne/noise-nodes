@@ -1,12 +1,55 @@
+/* WiFi AP SSID */
+#define WIFI_SSID "your ssid"
+/* WiFi password */
+#define WIFI_PASSWORD "your wifi psw"
 
-/* WLAN Configuration Settings */
-const char* ssid = "your wifi ssid";
-const char* password = "*****";
+/* 
+ *  InfluxDB  server url. Don't use localhost, always server name or ip address.
+ *  E.g. http://192.168.1.48:8086 
+*/
 
-/* MQTT Broker Configuration Settings */
-const char* mqtt_broker_address = "192.168.1.100";
-const uint16_t mqtt_port = 1883;
-const char* client_id = "IOTNODE_ESP32";
+#define INFLUXDB_URL "http://192.168.1.2:8086"
+#define INFLUXDB_DB_NAME "your-influxdb-database"
+#define INFLUXDB_USER "your-influxdb-username"
+#define INFLUXDB_PASSWORD "your-influxdb-password"
+
+/* Same designation for all nodes */
+String SENSOR_ID =        "NoiseNode";
+
+/* Name of the IoT Node or a unique ID */
+#define DEVICE            "NoiseNode01"
+// #define DEVICE            "NoiseNode02"
+// #define DEVICE            "NoiseNode03"
+
+#define NODE_ID           "Node01"
+// #define NODE_ID           "Node02"
+// #define NODE_ID           "Node03"
+
+/*
+ * Get Geo Coordinates LAT/LANG from Google Maps and create GeoHash on http://geohash.co/ 
+ * Geohash (Size 12): 
+ * Node01: your geohash  (Coordinates eg. 52.42717185, 7.78053906 )
+ * Node02: u1hud3crb9w (52.42696750, 7.78031141) for example)
+ * Node03: u1hud612yp8 (52.42717185, 7.78053906) 
+*/
+
+#define GEOHASH     "your-geohash-node1"      // Node 1
+// #define GEOHASH  "your-geohash-node2"      // Node 2
+// #define GEOHASH  "your-geohash-node3"      // Node 3
+
+
+/* I2S peripheral to use (0 or 1) */
+#define I2S_PORT          I2S_NUM_0
+
+/* 
+ *  I2S pins - Can be routed to almost any (unused) ESP32 pin. 
+ *  SD can be any pin, inlcuding input only pins (36-39).
+ *  SCK (i.e. BCLK) and WS (i.e. L/R CLK) must be output capable pins
+*/
+#define I2S_WS            18 
+#define I2S_SD            19 
+#define I2S_SCK           23 
+
 
 /* Adapt Settings */
 #define LEQ_PERIOD        1           // second(s)
@@ -15,7 +58,7 @@ const char* client_id = "IOTNODE_ESP32";
 #define DB_UNITS          "dBA"       // customize based on above weighting used
 #define USE_DISPLAY       0
 
-// NOTE: Some microphones require at least DC-Blocker filter
+/* NOTE: Some microphones require at least DC-Blocker filter */
 #define MIC_EQUALIZER     INMP441    // See below for defined IIR filters or set to 'None' to disable
 #define MIC_OFFSET_DB     3.0103      // Default offset (sine-wave RMS vs. dBFS). Modify this value for linear calibration
 
@@ -28,29 +71,6 @@ const char* client_id = "IOTNODE_ESP32";
 #define MIC_CONVERT(s)    (s >> (SAMPLE_BITS - MIC_BITS))
 #define MIC_TIMING_SHIFT  0           // Set to one to fix MSB timing for some microphones, i.e. SPH0645LM4H-x
 
-// I2S pins - Can be routed to almost any (unused) ESP32 pin.
-//            SD can be any pin, inlcuding input only pins (36-39).
-//            SCK (i.e. BCLK) and WS (i.e. L/R CLK) must be output capable pins
-// Below ones are just example for my board layout, put here the pins you will use
-
-#define I2S_WS            18 
-#define I2S_SCK           23 
-#define I2S_SD            19 
-
-// I2S peripheral to use (0 or 1)
-#define I2S_PORT          I2S_NUM_0
-
-// Name of the IoT Node or a unique ID
-String SENSOR_ID = "sensor101";
-
-/* MQTT TOPICS */
-/*Topic structure: IOT/<SENSORID>/acc, IOT/<SENSORID>/mag*/
-
-String db_topic = "feinstaub";
-//String temp_topic = "IOT/" + SENSOR_ID + "/temp";
-
-char valTemperature[5];
-
 /*
 // IIR Filters
 */
@@ -58,12 +78,13 @@ char valTemperature[5];
 // DC-Blocker filter - removes DC component from I2S data
 // See: https://www.dsprelated.com/freebooks/filters/DC_Blocker.html
 // a1 = -0.9992 should heavily attenuate frequencies below 10Hz
+
 SOS_IIR_Filter DC_BLOCKER = { 
   gain: 1.0,
   sos: {{-1.0, 0.0, +0.9992, 0}}
 };
 
-// 
+/* 
 // Equalizer IIR filters to flatten microphone frequency response
 // See respective .m file for filter design. Fs = 48Khz.
 //
@@ -73,12 +94,14 @@ SOS_IIR_Filter DC_BLOCKER = {
 // [sos, gain] = tf2sos(B, A)
 // See: https://www.dsprelated.com/freebooks/filters/Series_Second_Order_Sections.html
 // NOTE: SOS matrix 'a1' and 'a2' coefficients are negatives of tf2sos output
-//
+/*
 
-// TDK/InvenSense ICS-43434
+/* TDK/InvenSense ICS-43434
 // Datasheet: https://www.invensense.com/wp-content/uploads/2016/02/DS-000069-ICS-43434-v1.1.pdf
 // B = [0.477326418836803, -0.486486982406126, -0.336455844522277, 0.234624646917202, 0.111023257388606];
 // A = [1.0, -1.93073383849136326, 0.86519456089576796, 0.06442838283825100, 0.00111249298800616];
+*/
+
 SOS_IIR_Filter ICS43434 = { 
   gain: 0.477326418836803,
   sos: { // Second-Order Sections {b1, b2, -a1, -a2}
@@ -87,10 +110,13 @@ SOS_IIR_Filter ICS43434 = {
   }
 };
 
+/*
 // TDK/InvenSense ICS-43432
 // Datasheet: https://www.invensense.com/wp-content/uploads/2015/02/ICS-43432-data-sheet-v1.3.pdf
 // B = [-0.45733702338341309   1.12228667105574775  -0.77818278904413563, 0.00968926337978037, 0.10345668405223755]
 // A = [1.0, -3.3420781082912949, 4.4033694320978771, -3.0167072679918010, 1.2265536567647031, -0.2962229189311990, 0.0251085747458112]
+*/
+
 SOS_IIR_Filter ICS43432 = {
   gain: -0.457337023383413,
   sos: { // Second-Order Sections {b1, b2, -a1, -a2}
@@ -104,6 +130,7 @@ SOS_IIR_Filter ICS43432 = {
 // Datasheet: https://www.invensense.com/wp-content/uploads/2015/02/INMP441.pdf
 // B ~= [1.00198, -1.99085, 0.98892]
 // A ~= [1.0, -1.99518, 0.99518]
+
 SOS_IIR_Filter INMP441 = {
   gain: 1.00197834654696, 
   sos: { // Second-Order Sections {b1, b2, -a1, -a2}
@@ -116,6 +143,7 @@ SOS_IIR_Filter INMP441 = {
 // B ~= [1.001240684967527, -1.996936108836337, 0.995703101823006]
 // A ~= [1.0, -1.997675693595542, 0.997677044195563]
 // With additional DC blocking component
+
 SOS_IIR_Filter IM69D130 = {
   gain: 1.00124068496753,
   sos: {
@@ -129,6 +157,7 @@ SOS_IIR_Filter IM69D130 = {
 // B ~= [1.001234, -1.991352, 0.990149]
 // A ~= [1.0, -1.993853, 0.993863]
 // With additional DC blocking component
+
 SOS_IIR_Filter SPH0645LM4H_B_RB = {
   gain: 1.00123377961525, 
   sos: { // Second-Order Sections {b1, b2, -a1, -a2}
