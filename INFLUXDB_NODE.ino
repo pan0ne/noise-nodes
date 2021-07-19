@@ -1,8 +1,22 @@
-/*   Arduino Sketch to Program an ESP32 to read i2c MEMS Sensor from
- *   its I2C Bus, convert the data into InfluxDB's Line Protocol Strings
- *   and Publish it to an MQTT broker running on an IoTStack (Pi4)
- *   Author: Pan0ne https://github.com/pan0ne/noise-nodes 
- *   Thanks to <https://github.com/shantanoo-desai> and https://github.com/ikostoski/esp32-i2s-slm
+/*   Arduino Sketch to Program ESP32's to read i2c MEMS Sensor from
+ *   its I2C Bus, send the data directly into InfluxDB
+ *   
+ *   BOARD: DOIT ESP32 DEVKIT V1
+ *   USED BOARD MANAGER URL: https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
+ *   ADD LIBRARYS: Unzip github repos to /Arduino/Libraries/ 
+ *   ADD TABS: credentials.h and sos-iir-filter.h (Drag&Drop files from folder to Arduino IDE)
+ *   CONFIG: change credentials.h with wifi, influxdb with node ares and names
+ *   
+ *   PIN CONNECTION ESP32 to INMP441 Mic Sensor
+ *   3.3V - VDD
+ *   GND - GND
+ *   PIN 19 - SD
+ *   PIN 18 - WS
+ *   PIN23 - SCK
+ *   
+ *   Author: Pan0ne 
+ *   Repository: https://github.com/pan0ne/noise-nodes 
+ *   Thanks to: https://github.com/shantanoo-desai and https://github.com/ikostoski/esp32-i2s-slm
 */
 #include <Arduino.h>
 #include <Wire.h>                     // https://github.com/espressif/arduino-esp32
@@ -12,45 +26,31 @@
 #include <WiFi.h>                     // https://github.com/espressif/arduino-esp32
 #include <PubSubClient.h>             // https://github.com/knolleary/pubsubclient
 #include "credentials.h"              // Drag and drop credentials.h as new tab
+#include <InfluxDbClient.h>
 
 WiFiClient espClient; 
-PubSubClient client(espClient);
+
+// InfluxDB client instance
+InfluxDBClient client(INFLUXDB_URL, INFLUXDB_DB_NAME);
+
+// Data point
+Point sensor(SENSOR_ID);
 
 // Calculate reference amplitude value at compile time
 constexpr double MIC_REF_AMPL = pow(10, double(MIC_SENSITIVITY)/20) * ((1<<(MIC_BITS-1))-1);
 
-/*Reconnect to MQTT Broker*/
-void reconnect() {
-  // Loop until we're reconnected
-  while (!client.connected()) {
-    Serial.println("MQTT:reconnect: Attempting MQTT connection...");
-    // Attempt to connect
-    if (client.connect(client_id)) {
-      Serial.println("MQTT:reconnect: Connected");
-    } else {
-      Serial.print("MQTT:reconnect: Failed, rc=");
-      Serial.print(client.state());
-      Serial.println("MQTT:reconnect: Trying Again in 2 seconds");
-      // Wait 2 seconds before retrying
-      delay(2000);
-    }
-  }
-}
-
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
-  Serial.println("LSM MQTT Demo");
-  /*
-  if (!lsm.begin()) {
-    Serial.println("Sensor Not Initialized");
-    while(1);
-  }
-  */
+  Serial.println("NoiseNode - Decibel Meter Mesh System");
+  Serial.println("Device ID: " DEVICE);
+  Serial.println("Node ID: "  NODE_ID);
+  Serial.println("Geohash: "  GEOHASH);
+
   Serial.println("Found Sensor, Setting up");
   delay(1000);
   Serial.println("Connecting to WLAN Access-Point");
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
         delay(500);
         Serial.print(".");
@@ -58,8 +58,22 @@ void setup() {
  Serial.println("main:setup: WiFi Connected");
  Serial.println("main:setup: IP Address: ");
  Serial.println(WiFi.localIP());
- Serial.println("main:setup: Setting up MQTT Configuration");
- client.setServer(mqtt_broker_address, mqtt_port);
+
+ // Set InfluxDB 1 authentication params
+ client.setConnectionParamsV1(INFLUXDB_URL, INFLUXDB_DB_NAME, INFLUXDB_USER, INFLUXDB_PASSWORD);
+
+ // Add constant tags - only once
+ sensor.addTag("device", DEVICE);
+ sensor.addTag("geohash", GEOHASH);
+
+  // Check server connection
+  if (client.validateConnection()) {
+    Serial.print("Connected to InfluxDB: ");
+    Serial.println(client.getServerUrl());
+  } else {
+    Serial.print("InfluxDB connection failed: ");
+    Serial.println(client.getLastErrorMessage());
+  }
 
  // Create FreeRTOS queue
   samples_queue = xQueueCreate(8, sizeof(sum_queue_t));
@@ -72,9 +86,9 @@ void setup() {
   xTaskCreate(mic_i2s_reader_task, "Mic I2S Reader", I2S_TASK_STACK, NULL, I2S_TASK_PRI, NULL);
 
   sum_queue_t q;
-  uint32_t Leq_samples = 0;
-  double Leq_sum_sqr = 0;
-  double Leq_dB = 0;
+  uint32_t  Leq_samples = 0;
+  double    Leq_sum_sqr = 0;
+  double    Leq_dB = 0;
 
   // Read sum of samaples, calculated by 'i2s_reader_task'
   while (xQueueReceive(samples_queue, &q, portMAX_DELAY)) {
@@ -101,33 +115,39 @@ void setup() {
       Leq_sum_sqr = 0;
       Leq_samples = 0;
       
-      // Serial output, customize (or remove) as needed
-      //Serial.printf("Decible: %.1f\n", Leq_dB);
+      // Serial.printf("Decible: %.1f\n", Leq_dB);
       sendToInfluxDB(Leq_dB);
-      //delay(1000);
 
       // Debug only
      // Serial.printf("%u processing ticks\n", q.proc_ticks);
     }
   }
+  
 }
 
 void sendToInfluxDB(float valueInDecibels)
 {
-   // read temperature
-  dtostrf(valueInDecibels, 3, 1, valTemperature);
-  String payload;
-  payload = "sensor2 db=";
-  payload += valTemperature;
-  // publish temperature
-  if (!client.connected()){
-    reconnect();
-  }
-  client.loop();
-  client.publish("db", (char*) payload.c_str());
-  //Serial.println("Send Data");
-  //Serial.printf("Decible: %.1f\n", valueInDecibels);
-  delay(1000);
+  double Leq_dB = valueInDecibels;
+ // Store measured value into point
+      sensor.clearFields();
+      sensor.addField("location", NODE_ID);
+      sensor.addField("dB", Leq_dB);
+      //sensor.addField("uptime", millis());
+    
+      // Print what are we exactly writing or coment
+      // Serial.print("Writing: ");
+      // Serial.println(client.pointToLineProtocol(sensor));
+      // If no Wifi signal, try to reconnect it
+      
+      if (WiFi.status() != WL_CONNECTED) {
+        Serial.println("Wifi connection lost");
+      }
+      // Write point
+      if (!client.writePoint(sensor)) {
+        Serial.print("InfluxDB write failed: ");
+        Serial.println(client.getLastErrorMessage());
+      }
+  delay(2000);
 }
 
 void loop() {
